@@ -38,7 +38,7 @@ import String exposing (fromChar, length, toList)
 import UTF8 exposing (toSingleByte)
 
 
-{-| Takes a string. Produces a sha224sum (string).
+{-| Takes a string. Produces a sha1sum (string).
 
     sha1sum "foo æ ø å ñ"
         == "48a24ab372f84906d5f02386f94adf8f00238a9c"
