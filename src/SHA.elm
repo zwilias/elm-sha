@@ -377,19 +377,6 @@ hashComputation :
     -> Int
     -> String
 hashComputation str hs ks rnds shaprep addmod drop =
-    hashComputationHelper str hs ks rnds shaprep addmod drop
-
-
-hashComputationHelper :
-    String
-    -> List Int
-    -> Array Int
-    -> Int
-    -> (Int -> Array Int -> Int)
-    -> (List Int -> Int -> Int -> Array Int -> List Int)
-    -> Int
-    -> String
-hashComputationHelper str hs ks rnds shaprep addmod drop =
     let
         n =
             hs |> List.length
