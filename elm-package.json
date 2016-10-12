@@ -1,5 +1,5 @@
 {
-    "version": "1.0.1",
+    "version": "1.0.2",
     "summary": "An implementation of the SHA cryptographic hash functions in Elm",
     "repository": "https://github.com/spisemisu/elm-sha.git",
     "license": "MIT",
