@@ -52,4 +52,7 @@ sha256sumTests =
         , test "The quick brown fox jumps over the lazy dog" <|
             assertEqual "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592" <|
                 sha256sum "The quick brown fox jumps over the lazy dog"
+        , test "SHA224sum((SHA224sum 42) + (SHA224sum 43))" <|
+            assertEqual "2d98f505b9fae0055bc87b299a90a69b81df01bbd68d7f08c21dde4da87fcdb2" <|
+                sha256sum ((sha256sum "42") ++ (sha256sum "43"))
         ]

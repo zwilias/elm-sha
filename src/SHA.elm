@@ -258,11 +258,11 @@ preprocessing str =
                 (\i ->
                     Array.initialize 16
                         (\j ->
-                            case ( i + 1, j ) of
-                                ( n, 14 ) ->
+                            case ( n == (i + 1), j ) of
+                                ( True, 14 ) ->
                                     helperPrePenultimate l'
 
-                                ( n, 15 ) ->
+                                ( True, 15 ) ->
                                     helperPreLast l'
 
                                 ( _, _ ) ->
