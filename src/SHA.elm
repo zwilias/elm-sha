@@ -38,19 +38,30 @@ import String exposing (fromChar, length, toList)
 import UTF8 exposing (toSingleByte)
 
 
-{-| Takes a string. Produces a sha1sum (string).
+{-| Takes a string. Produces a sha1sum (string). In order to pass [NIST
+tests](http://www.nsrl.nist.gov/testdata/) the interface needs to be able to
+handle `HEX` values. Therefore, if a string starts with `0x` it will be handled
+as a `HEX` value so the following behaviour can be reproduced: `echo -n '195a'
+| xxd -r -p | sha1sum` (example done on a `Linux` box):
 
     sha1sum "foo æ ø å ñ"
         == "48a24ab372f84906d5f02386f94adf8f00238a9c"
 
     sha1sum "The quick brown fox jumps over the lazy dog"
         == "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12"
+
+    sha1sum "0x00"
+        == "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+
+    sha1sum "0x195a"
+        == "0a1c2d555bbe431ad6288af5a54f93e0449c9232"
+
 -}
 sha1sum : String -> String
 sha1sum str =
     let
         bytes =
-            toSingleByte str
+            str |> isHex
 
         padded =
             pad bytes
@@ -58,19 +69,29 @@ sha1sum str =
         hashComputation padded hs1 ks1 80 sha1prep sha1addmod 0
 
 
-{-| Takes a string. Produces a sha224sum (string).
+{-| Takes a string. Produces a sha224sum (string). In order to pass [NIST
+tests](http://www.nsrl.nist.gov/testdata/) the interface needs to be able to
+handle `HEX` values. Therefore, if a string starts with `0x` it will be handled
+as a `HEX` value so the following behaviour can be reproduced: `echo -n '195a'
+| xxd -r -p | sha224sum` (example done on a `Linux` box):
 
     sha224sum "foo æ ø å ñ"
         == "d028a5ce22044de77a30518c1e9fb46e39c3fb07b3ef07ee0c1b51bc"
 
     sha224sum "The quick brown fox jumps over the lazy dog"
         == "730e109bd7a8a32b1cb9d9a09aa2325d2430587ddbc0c38bad911525"
+
+    sha224sum "0x00"
+        == "d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f"
+
+    sha224sum "0x5c7b"
+        == "daff9bce685eb831f97fc1225b03c275a6c112e2d6e76f5faf7a36e6"
 -}
 sha224sum : String -> String
 sha224sum str =
     let
         bytes =
-            toSingleByte str
+            str |> isHex
 
         padded =
             pad bytes
@@ -78,22 +99,35 @@ sha224sum str =
         hashComputation padded hs224 ks2 64 sha2prep sha2addmod 1
 
 
-{-| Takes a string. Produces a sha256sum (string).
+{-| Takes a string. Produces a sha256sum (string). In order to pass [NIST
+tests](http://www.nsrl.nist.gov/testdata/) the interface needs to be able to
+handle `HEX` values. Therefore, if a string starts with `0x` it will be handled
+as a `HEX` value so the following behaviour can be reproduced: `echo -n '195a'
+| xxd -r -p | sha256sum` (example done on a `Linux` box):
 
     sha256sum "foo æ ø å ñ"
         == "b4c0dfecf21e1ea3cf64b0a0fe6a82fd24e4bb4480df6d0657f701d5d7c8ac18"
 
     sha256sum "The quick brown fox jumps over the lazy dog"
         == "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592"
+
+    sha256sum "0x00"
+        == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+    sha256sum "0xd3"
+        == "28969cdfa74a12c82f3bad960b0b000aca2ac329deea5c2328ebc6f2ba9802c1"
 -}
 sha256sum : String -> String
 sha256sum str =
     let
         bytes =
-            toSingleByte str
+            str |> isHex
 
         padded =
             pad bytes
+
+        n =
+            padded |> String.length
     in
         hashComputation padded hs256 ks2 64 sha2prep sha2addmod 0
 
@@ -686,3 +720,84 @@ rotl : Int -> Int -> Int
 rotl x n =
     -- Rotate left (circular left shift) value x by n positions [§3.2.5]
     (x .<< n) .| (x .>>> (32 - n))
+
+
+
+-- HELPERS
+
+
+isHex : String -> String
+isHex str =
+    case String.startsWith "0x" str of
+        True ->
+            hexToString (String.dropLeft 2 str)
+
+        False ->
+            toSingleByte str
+
+
+hexToString : String -> String
+hexToString hex =
+    -- Take chunks of 2 hex digits and apply formula: (a * 16^1) + (b * 16^0)
+    -- Example (d_16 = 13_10): 0xd3 => (d * 16^1) + (3 * 16^0) = 208 + 3 = 211
+    let
+        zero =
+            hex |> String.all (\c -> c == '0')
+
+        asciiToNumber x =
+            let
+                y =
+                    x |> Char.toCode
+            in
+                case y > 96 of
+                    -- ASCII codes for [a-f] => [97-102]
+                    True ->
+                        y - 97 + 10
+
+                    -- ASCII codes for [0-9] => [48-57]
+                    False ->
+                        y - 48
+
+        rec xs acc =
+            case xs == "" of
+                False ->
+                    let
+                        ( y, ys ) =
+                            case String.uncons xs of
+                                Nothing ->
+                                    ( Nothing, "" )
+
+                                Just ( a, rest ) ->
+                                    ( Just a, rest )
+
+                        ( z, zs ) =
+                            case String.uncons ys of
+                                Nothing ->
+                                    ( Nothing, "" )
+
+                                Just ( b, rest ) ->
+                                    ( Just b, rest )
+
+                        keyCode =
+                            case ( y, z ) of
+                                ( Just a, Just b ) ->
+                                    ((asciiToNumber a) * 16)
+                                        + (asciiToNumber b)
+
+                                ( Just a, _ ) ->
+                                    (asciiToNumber a) * 16
+
+                                ( _, _ ) ->
+                                    0
+                    in
+                        rec zs (acc ++ (keyCode |> stringify))
+
+                True ->
+                    acc
+    in
+        case zero of
+            True ->
+                ""
+
+            False ->
+                rec (hex |> String.toLower) ""

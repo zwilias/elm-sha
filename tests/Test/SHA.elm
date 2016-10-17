@@ -28,6 +28,12 @@ sha1sumTests =
         , test "The quick brown fox jumps over the lazy dog" <|
             assertEqual "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12" <|
                 sha1sum "The quick brown fox jumps over the lazy dog"
+        , test "0x00" <|
+            assertEqual "da39a3ee5e6b4b0d3255bfef95601890afd80709" <|
+                sha1sum "0x00"
+        , test "0x195a" <|
+            assertEqual "0a1c2d555bbe431ad6288af5a54f93e0449c9232" <|
+                sha1sum "0x195a"
         ]
 
 
