@@ -1,6 +1,8 @@
-module Main exposing (..)
+port module Main exposing (..)
 
-import ElmTest exposing (..)
+import Json.Encode exposing (Value)
+import Test exposing (..)
+import Test.Runner.Node exposing (TestProgram, run)
 import Test.SHA as SHA
 import Test.SHA1ShortMsg as SHA1ShortMsg
 import Test.SHA224ShortMsg as SHA224ShortMsg
@@ -12,7 +14,7 @@ import Test.SHA256LongMsg as SHA256LongMsg
 
 tests : Test
 tests =
-    suite "Tests for SHA cryptographic hash library"
+    describe "Tests for SHA cryptographic hash library"
         [ SHA.sha1sumTests
         , SHA.sha224sumTests
         , SHA.sha256sumTests
@@ -25,6 +27,9 @@ tests =
         ]
 
 
-main : Program Never
+main : TestProgram
 main =
-    runSuite tests
+    run emit tests
+
+
+port emit : ( String, Value ) -> Cmd msg

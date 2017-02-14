@@ -1,5 +1,6 @@
 #!/bin/sh
 
+git push
 git status
 git checkout sync
 git status

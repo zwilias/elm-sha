@@ -2,16 +2,17 @@
     "version": "1.0.2",
     "summary": "Tests for Elm's SHA cryptographic hash library",
     "repository": "https://github.com/spisemisu/elm-sha.git",
-    "license": "MIT",
+    "license": "LGPL-3.0",
     "source-directories": [
         ".",
         "../src"
     ],
     "exposed-modules": [],
     "dependencies": {
-        "elm-community/elm-test": "1.1.0 <= v < 2.0.0",
-        "elm-lang/core": "4.0.0 <= v < 5.0.0",
-        "spisemisu/elm-utf8": "1.0.0 <= v < 2.0.0"
+        "elm-community/elm-test": "3.1.0 <= v < 4.0.0",
+        "elm-lang/core": "5.1.1 <= v < 6.0.0",
+        "spisemisu/elm-utf8": "1.0.1 <= v < 2.0.0",
+        "rtfeldman/node-test-runner": "3.0.0 <= v < 4.0.0"
     },
-    "elm-version": "0.17.0 <= v < 0.18.0"
+    "elm-version": "0.18.0 <= v < 0.19.0"
 }

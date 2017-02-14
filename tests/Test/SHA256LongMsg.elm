@@ -1,6 +1,7 @@
 module Test.SHA256LongMsg exposing (sha256LongMsgTests)
 
-import ElmTest exposing (..)
+import Expect exposing (..)
+import Test exposing (..)
 import SHA exposing (sha256sum)
 
 
@@ -11,10 +12,10 @@ sha256sum =
 
 sha256LongMsgTests : Test
 sha256LongMsgTests =
-    suite "SHA-256 Long Msg (RSP)"
+    describe "SHA-256 Long Msg (RSP)"
         (data
             |> List.map
-                (\( msg, md ) -> test msg <| assertEqual md <| sha256sum msg)
+                (\( msg, md ) -> test msg <| \() -> sha256sum msg |> Expect.equal md)
         )
 
 

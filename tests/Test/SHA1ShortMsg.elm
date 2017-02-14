@@ -1,6 +1,7 @@
 module Test.SHA1ShortMsg exposing (sha1ShortMsgTests)
 
-import ElmTest exposing (..)
+import Expect exposing (..)
+import Test exposing (..)
 import SHA exposing (sha1sum)
 
 
@@ -11,10 +12,10 @@ sha1sum =
 
 sha1ShortMsgTests : Test
 sha1ShortMsgTests =
-    suite "SHA-1 Short Msg (RSP)"
+    describe "SHA-1 Short Msg (RSP)"
         (data
             |> List.map
-                (\( msg, md ) -> test msg <| assertEqual md <| sha1sum msg)
+                (\( msg, md ) -> test msg <| \() -> sha1sum msg |> Expect.equal md)
         )
 
 

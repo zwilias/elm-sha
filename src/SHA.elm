@@ -22,9 +22,8 @@ import Bitwise
         ( and
         , complement
         , or
-        , shiftLeft
-        , shiftRight
-        , shiftRightLogical
+        , shiftLeftBy
+        , shiftRightZfBy
         , xor
         )
 import Char exposing (KeyCode, fromCode, toCode)
@@ -276,12 +275,12 @@ preprocessing str =
         xs =
             strToCharArray str
 
-        l' =
+        l_ =
             String.length str
 
         l =
             -- length (in 32-bit integers) of msg + ‘1’ + appended length
-            (l' |> toFloat) / 4.0 + 2.0
+            (l_ |> toFloat) / 4.0 + 2.0
 
         n =
             -- number of 16-integer-blocks required to hold 'l' ints
@@ -294,10 +293,10 @@ preprocessing str =
                         (\j ->
                             case ( n == (i + 1), j ) of
                                 ( True, 14 ) ->
-                                    helperPrePenultimate l'
+                                    helperPrePenultimate l_
 
                                 ( True, 15 ) ->
-                                    helperPreLast l'
+                                    helperPreLast l_
 
                                 ( _, _ ) ->
                                     helperPre i j xs
@@ -335,56 +334,26 @@ helperPreLast n =
        note: most significant word would be (len-1)*8 >>> 32, but since JS converts
        bitwise-op args to 32 bits, we need to simulate this by arithmetic operators
     -}
-    ((n - 1) * 8) .& 0xFFFFFFFF
+    ((n - 1) * 8)
+        |> Bitwise.and 0xFFFFFFFF
 
 
 helperPre : Int -> Int -> Array Char -> Int
 helperPre i j xs =
     -- encode 4 chars per integer, big-endian encoding
     -- note running off the end of msg is ok 'cos bitwise ops on NaN return 0
-    (getKeyCode (i * 64 + j * 4) xs .<< 24)
-        .| (getKeyCode (i * 64 + j * 4 + 1) xs .<< 16)
-        .| (getKeyCode (i * 64 + j * 4 + 2) xs .<< 8)
-        .| (getKeyCode (i * 64 + j * 4 + 3) xs)
-
-
-(.&) : Int -> Int -> Int
-(.&) =
-    Bitwise.and
-
-
-(.|) : Int -> Int -> Int
-(.|) =
-    Bitwise.or
-
-
-(.^) : Int -> Int -> Int
-(.^) =
-    Bitwise.xor
-
-
-
-{- Can define unary operators but not use them ...
-
-   (.~) : Int -> Int
-   (.~) =
-       Bitwise.complement
--}
-
-
-(.<<) : Int -> Int -> Int
-(.<<) =
-    Bitwise.shiftLeft
-
-
-(.>>) : Int -> Int -> Int
-(.>>) =
-    Bitwise.shiftRight
-
-
-(.>>>) : Int -> Int -> Int
-(.>>>) =
-    Bitwise.shiftRightLogical
+    (getKeyCode (i * 64 + j * 4) xs
+        |> Bitwise.shiftLeftBy 24
+    )
+        |> Bitwise.or
+            (getKeyCode (i * 64 + j * 4 + 1) xs
+                |> Bitwise.shiftLeftBy 16
+            )
+        |> Bitwise.or
+            (getKeyCode (i * 64 + j * 4 + 2) xs
+                |> Bitwise.shiftLeftBy 8
+            )
+        |> Bitwise.or (getKeyCode (i * 64 + j * 4 + 3) xs)
 
 
 getKeyCode : Int -> Array Char -> KeyCode
@@ -474,7 +443,13 @@ sha1prep i xs =
         im16 =
             getInt (i - 16) xs
     in
-        rotl (im3 .^ im8 .^ im14 .^ im16) 1
+        rotl
+            (im3
+                |> Bitwise.xor im8
+                |> Bitwise.xor im14
+                |> Bitwise.xor im16
+            )
+            1
 
 
 sha2prep : Int -> Array Int -> Int
@@ -497,7 +472,7 @@ sha2prep i xs =
             + (sigmaZero im15)
             + im16
         )
-            .& 0xFFFFFFFF
+            |> Bitwise.and 0xFFFFFFFF
 
 
 loop :
@@ -508,13 +483,13 @@ loop :
     -> List Int
 loop addmod hs ws ks =
     let
-        ( _, hs' ) =
+        ( _, hs_ ) =
             ws
                 |> Array.foldl
                     (\x ( i, acc ) -> ( i + 1, addmod acc x i ks ))
                     ( 0, hs )
     in
-        List.map2 (\h h' -> (h + h') .& 0xFFFFFFFF) hs hs'
+        List.map2 (\h h_ -> (h + h_) |> Bitwise.and 0xFFFFFFFF) hs hs_
 
 
 sha1addmod : List Int -> Int -> Int -> Array Int -> List Int
@@ -522,8 +497,8 @@ sha1addmod hs x i ks =
     let
         ( a, b, c, d, e ) =
             case hs of
-                a' :: b' :: c' :: d' :: e' :: [] ->
-                    ( a', b', c', d', e' )
+                a_ :: b_ :: c_ :: d_ :: e_ :: [] ->
+                    ( a_, b_, c_, d_, e_ )
 
                 _ ->
                     Debug.crash "Not supported amount of variables"
@@ -538,24 +513,24 @@ sha1addmod hs x i ks =
                 + (getInt s ks)
                 + x
             )
-                .& 0xFFFFFFFF
+                |> Bitwise.and 0xFFFFFFFF
 
-        e' =
+        e_ =
             d
 
-        d' =
+        d_ =
             c
 
-        c' =
+        c_ =
             rotl b 30
 
-        b' =
+        b_ =
             a
 
-        a' =
+        a_ =
             t
     in
-        [ a', b', c', d', e' ]
+        [ a_, b_, c_, d_, e_ ]
 
 
 sha2addmod : List Int -> Int -> Int -> Array Int -> List Int
@@ -563,8 +538,8 @@ sha2addmod hs x i ks =
     let
         ( a, b, c, d, e, f, g, h ) =
             case hs of
-                a' :: b' :: c' :: d' :: e' :: f' :: g' :: h' :: [] ->
-                    ( a', b', c', d', e', f', g', h' )
+                a_ :: b_ :: c_ :: d_ :: e_ :: f_ :: g_ :: h_ :: [] ->
+                    ( a_, b_, c_, d_, e_, f_, g_, h_ )
 
                 _ ->
                     Debug.crash "Not supported amount of variables"
@@ -580,31 +555,33 @@ sha2addmod hs x i ks =
             (capSigmaZero a)
                 + (majority a b c)
 
-        h' =
+        h_ =
             g
 
-        g' =
+        g_ =
             f
 
-        f' =
+        f_ =
             e
 
-        e' =
-            (d + t1) .& 0xFFFFFFFF
+        e_ =
+            (d + t1)
+                |> Bitwise.and 0xFFFFFFFF
 
-        d' =
+        d_ =
             c
 
-        c' =
+        c_ =
             b
 
-        b' =
+        b_ =
             a
 
-        a' =
-            (t1 + t2) .& 0xFFFFFFFF
+        a_ =
+            (t1 + t2)
+                |> Bitwise.and 0xFFFFFFFF
     in
-        [ a', b', c', d', e', f', g', h' ]
+        [ a_, b_, c_, d_, e_, f_, g_, h_ ]
 
 
 getInt : Int -> Array Int -> Int
@@ -626,9 +603,11 @@ numberToHexHlp i n =
     let
         x =
             -- x & 0x0F =>  x mod 16
-            n .>>> (i * 4) .& 0x0F
+            n
+                |> Bitwise.shiftRightZfBy (i * 4)
+                |> Bitwise.and 0x0F
 
-        x' =
+        x_ =
             case x < 10 of
                 -- ASCII codes for [0-9] => [48-57]
                 True ->
@@ -638,7 +617,7 @@ numberToHexHlp i n =
                 False ->
                     (x + 97 - 10)
     in
-        x' |> stringify
+        x_ |> stringify
 
 
 stringify : KeyCode -> String
@@ -669,7 +648,9 @@ sha1f s x y z =
 
 parity : Int -> Int -> Int -> Int
 parity x y z =
-    x .^ y .^ z
+    x
+        |> Bitwise.xor y
+        |> Bitwise.xor z
 
 
 
@@ -678,32 +659,43 @@ parity x y z =
 
 capSigmaZero : Int -> Int
 capSigmaZero x =
-    (rotr 2 x) .^ (rotr 13 x) .^ (rotr 22 x)
+    (rotr 2 x)
+        |> Bitwise.xor (rotr 13 x)
+        |> Bitwise.xor (rotr 22 x)
 
 
 capSigmaOne : Int -> Int
 capSigmaOne x =
-    (rotr 6 x) .^ (rotr 11 x) .^ (rotr 25 x)
+    (rotr 6 x)
+        |> Bitwise.xor (rotr 11 x)
+        |> Bitwise.xor (rotr 25 x)
 
 
 sigmaZero : Int -> Int
 sigmaZero x =
-    (rotr 7 x) .^ (rotr 18 x) .^ (x .>>> 3)
+    (rotr 7 x)
+        |> Bitwise.xor (rotr 18 x)
+        |> Bitwise.xor (x |> Bitwise.shiftRightZfBy 3)
 
 
 sigmaOne : Int -> Int
 sigmaOne x =
-    (rotr 17 x) .^ (rotr 19 x) .^ (x .>>> 10)
+    (rotr 17 x)
+        |> Bitwise.xor (rotr 19 x)
+        |> Bitwise.xor (x |> Bitwise.shiftRightZfBy 10)
 
 
 choice : Int -> Int -> Int -> Int
 choice x y z =
-    (x .& y) .^ ((complement x) .& z)
+    (x |> Bitwise.and y)
+        |> Bitwise.xor ((complement x) |> Bitwise.and z)
 
 
 majority : Int -> Int -> Int -> Int
 majority x y z =
-    (x .& y) .^ (x .& z) .^ (y .& z)
+    (x |> Bitwise.and y)
+        |> Bitwise.xor (x |> Bitwise.and z)
+        |> Bitwise.xor (y |> Bitwise.and z)
 
 
 
@@ -713,13 +705,15 @@ majority x y z =
 rotr : Int -> Int -> Int
 rotr n x =
     -- Rotates right (circular right shift) value x by n positions [§3.2.4]
-    (x .>>> n) .| (x .<< (32 - n))
+    (x |> Bitwise.shiftRightZfBy n)
+        |> Bitwise.or (x |> Bitwise.shiftLeftBy (32 - n))
 
 
 rotl : Int -> Int -> Int
 rotl x n =
     -- Rotate left (circular left shift) value x by n positions [§3.2.5]
-    (x .<< n) .| (x .>>> (32 - n))
+    (x |> Bitwise.shiftLeftBy n)
+        |> Bitwise.or (x |> Bitwise.shiftRightZfBy (32 - n))
 
 
 
